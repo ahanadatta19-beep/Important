@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>For You 💌</title>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap');
+
+body {
+  margin: 0;
+  height: 100vh;
+  background: radial-gradient(circle at top, #ffe6eb, #ff9a9e);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: 'Poppins', sans-serif;
+  overflow: hidden;
+}
+
+.container {
+  text-align: center;
+  z-index: 2;
+}
+
+.envelope {
+  width: 240px;
+  height: 160px;
+  background: #fff;
+  position: relative;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+  transition: transform 0.4s ease;
+}
+
+.envelope:hover { transform: scale(1.05); }
+
+.flap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: #ff6f91;
+  clip-path: polygon(0 0, 100% 0, 50% 50%);
+  border-radius: 12px 12px 0 0;
+  transform-origin: top;
+  transition: transform 0.6s ease;
+}
+
+.envelope.open .flap { transform: rotateX(180deg); }
+
+.heart {
+  position: absolute;
+  top: 65px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 30px;
+}
+
+.message-box {
+  display: none;
+  max-width: 420px;
+  background: white;
+  padding: 30px;
+  border-radius: 18px;
+  box-shadow: 0 25px 60px rgba(0,0,0,0.3);
+  animation: fadeUp 0.6s ease forwards;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+button {
+  margin: 8px;
+  padding: 12px 22px;
+  border: none;
+  background: linear-gradient(135deg, #ff6f91, #ff9472);
+  color: white;
+  border-radius: 30px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+button:hover { transform: scale(1.08); }
+
+.confetti {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  opacity: 0.8;
+  animation: fall 3s linear infinite;
+}
+
+@keyframes fall {
+  0% { transform: translateY(-10vh) rotate(0deg); }
+  100% { transform: translateY(110vh) rotate(360deg); }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+  <div class="envelope" id="envelope">
+    <div class="flap"></div>
+    <div class="heart">💌</div>
+  </div>
+
+  <div class="message-box" id="messageBox">
+    <p id="messageText"></p>
+    <div id="buttonArea"></div>
+  </div>
+</div>
+
+<script>
+const steps = [
+  {
+    text: "Distance is annoying.<br><strong>But you?</strong> Still my favourite constant.",
+    buttons: [{ label: "Continue 😌", action: next }]
+  },
+  {
+    text: "Also — small but important update:<br><br><strong>You are my favourite notification every morning.</strong>",
+    buttons: [{ label: "As you should be", action: next }]
+  },
+  {
+    text: "Mini quest unlocked 🗺️<br><br>You don’t <em>have</em> to win this.<br>But I expect excellence.",
+    buttons: [{ label: "I’m ready", action: next }]
+  },
+  {
+    text: "First checkpoint.<br><br>If my personality had a colour palette,<br>what shade would quietly dominate?",
+    buttons: [
+      { label: "Blue 💙", correct: true },
+      { label: "Red", correct: false },
+      { label: "Green", correct: false }
+    ]
+  },
+  {
+    text: "Correct.<br><br>Suspiciously correct.<br>Good memory.",
+    buttons: [{ label: "Next clue", action: next }]
+  },
+  {
+    text: "Second checkpoint 👟<br><br>If you were buying me shoes<br>without asking me (risky),<br>what number saves you?",
+    buttons: [
+      { label: "7 ✨", correct: true },
+      { label: "6", correct: false },
+      { label: "8", correct: false }
+    ]
+  },
+  {
+    text: "Impressive.<br><br>You’re doing well.<br>Don’t get cocky.",
+    buttons: [{ label: "Proceed", action: next }]
+  },
+  {
+    text: "Side quest unlocked 🎮<br><br>Be ready to lose in Battleship.<br>I will destroy all your ships within a minute.<br>No mercy.",
+    buttons: [{ label: "Threat accepted", action: next }]
+  },
+  {
+    text: "Final level ❤️<br><br>All clues collected.<br>All answers noted.",
+    buttons: [{ label: "Okay…", action: next }]
+  },
+  {
+    text: "<strong>Will you be my Valentine?</strong>",
+    buttons: [
+      { label: "YES 💖", action: yesPath },
+      { label: "OBVIOUSLY YES 😌", action: obviouslyYesPath }
+    ]
+  }
+];
+
+let stepIndex = 0;
+
+const envelope = document.getElementById("envelope");
+const messageBox = document.getElementById("messageBox");
+const messageText = document.getElementById("messageText");
+const buttonArea = document.getElementById("buttonArea");
+
+function createConfetti(amount = 40) {
+  for (let i = 0; i < amount; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.background = ["#ff6f91","#ffd1dc","#ff9472"][Math.floor(Math.random()*3)];
+    c.style.animationDuration = 2 + Math.random()*3 + "s";
+    document.body.appendChild(c);
+    setTimeout(() => c.remove(), 4000);
+  }
+}
+
+function renderStep() {
+  const step = steps[stepIndex];
+  messageText.innerHTML = step.text;
+  buttonArea.innerHTML = "";
+  step.buttons.forEach(btn => {
+    const b = document.createElement("button");
+    b.textContent = btn.label;
+    b.onclick = () => {
+      if (btn.correct === true) {
+        createConfetti(30);
+        stepIndex++;
+        renderStep();
+      } else if (btn.correct === false) {
+        b.textContent = "Try again 😏";
+      } else {
+        btn.action();
+      }
+    };
+    buttonArea.appendChild(b);
+  });
+}
+
+function next() {
+  stepIndex++;
+  renderStep();
+}
+
+function yesPath() {
+  messageText.innerHTML = `
+    Good choice 😌<br><br>
+    Because choosing anything else<br>
+    would’ve required<br>
+    <strong>a conversation™</strong><br><br>
+    And we both know this was smarter.<br><br>
+    — <strong>Ahana</strong>
+  `;
+  buttonArea.innerHTML = "";
+  createConfetti(60);
+}
+
+function obviouslyYesPath() {
+  messageText.innerHTML = `
+    Woohoo 🎉<br><br>
+    You have successfully subscribed to<br>
+    <strong>Ahana</strong><br>
+    for a <strong>lifetime</strong>.<br><br>
+    No refunds. No cancellations.<br>
+    Unlimited affection included.<br><br>
+    😌<br><br>
+    — <strong>Ahana</strong>
+  `;
+  buttonArea.innerHTML = "";
+  createConfetti(80);
+}
+
+envelope.addEventListener("click", () => {
+  envelope.classList.add("open");
+  createConfetti(25);
+  setTimeout(() => {
+    envelope.style.display = "none";
+    messageBox.style.display = "block";
+    renderStep();
+  }, 600);
+});
+</script>
+
+</body>
+</html>
